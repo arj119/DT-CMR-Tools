@@ -33,7 +33,6 @@ class App(QWidget):
         if fileName:
             x = loadmat(fileName)
             dataframe = DiffusionParameterData.DiffusionParameterData(x)
-            print(dataframe.getparameter("E1"))
 
     def openFileNamesDialog(self):
         options = QFileDialog.Options()
