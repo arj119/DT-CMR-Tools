@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
 from PyQt5.QtGui import QIcon
 from scipy.io import loadmat
-
+from DataAnalysis import DiffusionParameterData
 
 class App(QWidget):
 
@@ -31,8 +31,9 @@ class App(QWidget):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open file", "",
                                                   "MAT Files (*.mat)", options=options)
         if fileName:
-            print(fileName)
-            print(loadmat(fileName))
+            x = loadmat(fileName)
+            dataframe = DiffusionParameterData.DiffusionParameterData(x)
+            print(dataframe.getparameter("E1"))
 
     def openFileNamesDialog(self):
         options = QFileDialog.Options()

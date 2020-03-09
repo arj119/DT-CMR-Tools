@@ -78,3 +78,10 @@ env.bak/
 venv.bak/
 
 
+.idea/.gitignore
+.idea/DT-CMR-Tools.iml
+.idea/inspectionProfiles/
+.idea/libraries/
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
