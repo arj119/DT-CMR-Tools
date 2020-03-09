@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
 from PyQt5.QtGui import QIcon
+from scipy.io import loadmat
 
 
 class App(QWidget):
@@ -31,6 +32,7 @@ class App(QWidget):
                                                   "MAT Files (*.mat)", options=options)
         if fileName:
             print(fileName)
+            print(loadmat(fileName))
 
     def openFileNamesDialog(self):
         options = QFileDialog.Options()
