@@ -11,15 +11,20 @@ def __flatten__(list):
 
 
 class DiffusionParameterData:
-    def __init__(self, data):
+    def __init__(self):
+        self.raw_data = dict
+        self.diffusion_parameters = dict
+        self.summary = pd.DataFrame()
+
+    def __call__(self):
+        return self.summary
+
+    def add_data(self, data):
         self.raw_data = {key.replace(column_ending, ""): value for (key, value) in data.items() if
                          key.endswith(column_ending)}
         self.diffusion_parameters = {key: self.get_parameter(key) for key in self.raw_data.keys() if
                                      key in supported_diffusion_parameters}
-
         self.summary = self.get_summary_segments(range(0, 12))
-
-    def __call__(self):
         return self.summary
 
     def get_parameter(self, param_name):
