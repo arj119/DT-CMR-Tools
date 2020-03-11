@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QPushButton, QAbstractItemView, QGridLayout, \
-    QButtonGroup, QCheckBox, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QPushButton, QAbstractItemView, QButtonGroup, QCheckBox, \
+    QVBoxLayout, QHBoxLayout, QGroupBox
 from scipy.io import loadmat
 from DataAnalysis import DiffusionParameterData
 from DataAnalysis import DataFrameModel
@@ -12,19 +12,19 @@ class App(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.title = 'CMR Results Viewer'
+        self.title = 'Diffusion Parameter Results Viewer'
         self.left = 10
         self.top = 10
-        self.width = 800
-        self.height = 500
+        self.width = 700
+        self.height = 700
         self.diffusion_parameters = DiffusionParameterData.DiffusionParameterData()
         self.overall_summary_table = QtWidgets.QTableView()
         self.selected_segments_summary_table = QtWidgets.QTableView()
         self.segment_button_group = QButtonGroup()
-        self.grid = QGridLayout()
-        self.initUI()
+        self.vbox2 = QVBoxLayout()
+        self.init_ui()
 
-    def initUI(self):
+    def init_ui(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
@@ -38,28 +38,35 @@ class App(QWidget):
         load_file_button.move(100, 100)
         load_file_button.clicked.connect(self.open_file_dialog)
 
-        self.grid.setSpacing(10)
-        # vbox1 = QVBoxLayout()
-        # vbox = QVBoxLayout()
-        self.grid.addWidget(self.overall_summary_table, 1, 1, 3, 1)
-        self.grid.addWidget(self.selected_segments_summary_table, 8, 1, 7, 1)
-        self.grid.addWidget(load_file_button, 1, 2)
+        vbox1 = QVBoxLayout()
+        hbox1 = QHBoxLayout()
 
-        self.setLayout(self.grid)
+        vbox1.addWidget(self.overall_summary_table)
+        vbox1.addWidget(self.selected_segments_summary_table)
+        self.vbox2.addWidget(load_file_button)
+        self.vbox2.addStretch(1)
+        hbox1.addLayout(vbox1)
+        hbox1.addLayout(self.vbox2)
+
+        self.setLayout(hbox1)
         self.show()
 
-    # def create_summary_table(self, segments):
-
     def create_segment_buttons(self):
-        for i in range(0,12):
-            check_box = QCheckBox(str(i+1))
+        box = QGroupBox("Regions")
+        box.setStyleSheet("QGroupBox { border: 1px solid black;}")
+        vbox = QVBoxLayout()
+        vbox.addSpacing(20)
+        for i in range(0, 12):
+            check_box = QCheckBox(str(i + 1))
             check_box.clicked.connect(self.update_segment_summary)
-            self.grid.addWidget(check_box, 5 + i, 3)
+            vbox.addWidget(check_box)
             self.segment_button_group.addButton(check_box, i)
+        box.setLayout(vbox)
+        self.vbox2.addWidget(box)
+        self.vbox2.addStretch(1)
 
     def update_segment_summary(self):
         segments = [i for i, button in enumerate(self.segment_button_group.buttons()) if button.isChecked()]
-        print(len(segments))
         if len(segments) == 0:
             self.selected_segments_summary_table.hide()
         else:

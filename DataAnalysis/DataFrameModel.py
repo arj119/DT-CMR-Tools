@@ -50,6 +50,9 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         val = self._dataframe.iloc[row][col]
         if role == QtCore.Qt.DisplayRole:
+            # if isinstance(val, float):
+            #     # Render float to 2 dp
+            #     return "{0:.3g}".format(val)
             return str(val)
         elif role == DataFrameModel.ValueRole:
             return val
