@@ -58,7 +58,7 @@ class DiffusionParameterData:
         return [param_name, param_values_as_series.mean(), param_values_as_series.std()]
 
     def get_summary_segments(self, segments):
-        columns = ['Diffusion Parameter', 'mean', 'standard deviation']
+        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation']
         data = []
         for parameter in self.diffusion_parameters.keys():
             parameter_summary = self.get_parameter_segment_summary(parameter, segments)

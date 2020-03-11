@@ -1,8 +1,11 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
-from PyQt5.QtGui import QIcon
+
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QTableView, QPushButton, QAbstractItemView
 from scipy.io import loadmat
 from DataAnalysis import DiffusionParameterData
+from DataAnalysis import DataFrameModel
+
 
 class App(QWidget):
 
@@ -13,17 +16,30 @@ class App(QWidget):
         self.top = 10
         self.width = 640
         self.height = 480
+        self.vLayout = QtWidgets.QVBoxLayout(self)
+        self.hLayout = QtWidgets.QHBoxLayout()
+        self.tableview = QtWidgets.QTableView(self)
+        self.tableview.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
-
-        self.openFileNameDialog()
-        # self.openFileNamesDialog()
-        # self.saveFileDialog()
-
+        self.vLayout.addWidget(self.tableview)
+        loadBtn = QtWidgets.QPushButton("Select File", self)
+        loadBtn.clicked.connect(self.openFileNameDialog)
+        self.hLayout.addWidget(loadBtn)
+        self.vLayout.addLayout(self.hLayout)
         self.show()
+
+    def loadSummaryDataFrame(self, df):
+        model = DataFrameModel.DataFrameModel(df)
+        self.tableview.setModel(model)
+        self.tableview.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.tableview.resizeColumnsToContents()
+        self.tableview.show()
+
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -31,8 +47,9 @@ class App(QWidget):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open file", "",
                                                   "MAT Files (*.mat)", options=options)
         if fileName:
-            x = loadmat(fileName)
-            dataframe = DiffusionParameterData.DiffusionParameterData(x)
+            data = loadmat(fileName)
+            diffusion_parameters = DiffusionParameterData.DiffusionParameterData(data)
+            self.loadSummaryDataFrame(diffusion_parameters.summary)
 
     def openFileNamesDialog(self):
         options = QFileDialog.Options()
