@@ -1,8 +1,10 @@
-from PyQt5 import QtCore
 import pandas as pd
+from PyQt5 import QtCore
+
 
 # Credit to https://github.com/eyllanesc/stackoverflow/tree/master/questions/44603119
 
+# Used to convert panda data frame to a QTableModel
 class DataFrameModel(QtCore.QAbstractTableModel):
     DtypeRole = QtCore.Qt.UserRole + 1000
     ValueRole = QtCore.Qt.UserRole + 1001

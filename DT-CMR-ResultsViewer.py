@@ -1,11 +1,14 @@
+import csv
+import io
 import sys
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QPushButton, QAbstractItemView, QButtonGroup, QCheckBox, \
     QVBoxLayout, QHBoxLayout, QGroupBox
 from scipy.io import loadmat
-from DataAnalysis import DiffusionParameterData
+
 from DataAnalysis import DataFrameModel
+from DataAnalysis import DiffusionParameterData
 
 
 class App(QWidget):
@@ -18,21 +21,26 @@ class App(QWidget):
         self.width = 700
         self.height = 700
         self.diffusion_parameters = DiffusionParameterData.DiffusionParameterData()
-        self.overall_summary_table = QtWidgets.QTableView()
-        self.selected_segments_summary_table = QtWidgets.QTableView()
-        self.segment_button_group = QButtonGroup()
+        self.summary_table = QtWidgets.QTableView()
+        self.selected_region_summary_table = QtWidgets.QTableView()
+        self.region_selection_buttons = QButtonGroup()
         self.vbox2 = QVBoxLayout()
         self.init_ui()
 
+    #   Initialises UI
     def init_ui(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-        self.overall_summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.selected_segments_summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.selected_segments_summary_table.hide()
+        #   Initialises UI
+        self.summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.summary_table.installEventFilter(self)
 
-        self.segment_button_group.setExclusive(False)
+        self.selected_region_summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.selected_region_summary_table.installEventFilter(self)
+        self.selected_region_summary_table.hide()
+
+        self.region_selection_buttons.setExclusive(False)
 
         load_file_button = QPushButton("Select File")
         load_file_button.move(100, 100)
@@ -41,8 +49,8 @@ class App(QWidget):
         vbox1 = QVBoxLayout()
         hbox1 = QHBoxLayout()
 
-        vbox1.addWidget(self.overall_summary_table)
-        vbox1.addWidget(self.selected_segments_summary_table)
+        vbox1.addWidget(self.summary_table)
+        vbox1.addWidget(self.selected_region_summary_table)
         self.vbox2.addWidget(load_file_button)
         self.vbox2.addStretch(1)
         hbox1.addLayout(vbox1)
@@ -51,37 +59,66 @@ class App(QWidget):
         self.setLayout(hbox1)
         self.show()
 
-    def create_segment_buttons(self):
+    #   Creates region selection buttons
+    def create_region_selection(self):
         box = QGroupBox("Regions")
         box.setStyleSheet("QGroupBox { border: 1px solid black;}")
         vbox = QVBoxLayout()
         vbox.addSpacing(20)
         for i in range(0, 12):
             check_box = QCheckBox(str(i + 1))
-            check_box.clicked.connect(self.update_segment_summary)
+            check_box.clicked.connect(self.update_selected_region_summary)
             vbox.addWidget(check_box)
-            self.segment_button_group.addButton(check_box, i)
+            self.region_selection_buttons.addButton(check_box, i)
         box.setLayout(vbox)
         self.vbox2.addWidget(box)
         self.vbox2.addStretch(1)
 
-    def update_segment_summary(self):
-        segments = [i for i, button in enumerate(self.segment_button_group.buttons()) if button.isChecked()]
+    #   Creates region selection buttons
+    def eventFilter(self, source, event):
+        if (event.type() == QtCore.QEvent.KeyPress and
+                event.matches(QtGui.QKeySequence.Copy)):
+            self.copy_selection(source)
+            return True
+        return super(App, self).eventFilter(source, event)
+
+    #   Allows user to copy their table selection
+    def copy_selection(self, tableview):
+        selection = tableview.selectedIndexes()
+        if selection:
+            rows = sorted(index.row() for index in selection)
+            columns = sorted(index.column() for index in selection)
+            rowcount = rows[-1] - rows[0] + 1
+            colcount = columns[-1] - columns[0] + 1
+            table = [[''] * colcount for _ in range(rowcount)]
+            for index in selection:
+                row = index.row() - rows[0]
+                column = index.column() - columns[0]
+                table[row][column] = index.data()
+            stream = io.StringIO()
+            csv.writer(stream, delimiter='\t').writerows(table)
+            QtWidgets.qApp.clipboard().setText(stream.getvalue())
+
+    #   Updates selected region summary table
+    def update_selected_region_summary(self):
+        segments = [i for i, button in enumerate(self.region_selection_buttons.buttons()) if button.isChecked()]
         if len(segments) == 0:
-            self.selected_segments_summary_table.hide()
+            self.selected_region_summary_table.hide()
         else:
-            segment_summary = self.diffusion_parameters.get_summary_segments(segments)
+            segment_summary = self.diffusion_parameters.get_regions_summary(segments)
             model = DataFrameModel.DataFrameModel(segment_summary)
-            self.selected_segments_summary_table.setModel(model)
-            self.selected_segments_summary_table.resizeColumnsToContents()
-            self.selected_segments_summary_table.show()
+            self.selected_region_summary_table.setModel(model)
+            self.selected_region_summary_table.resizeColumnsToContents()
+            self.selected_region_summary_table.show()
 
-    def load_summary_data_frame(self, summary):
+    #   Loads data summary
+    def load_summary_table(self, summary):
         model = DataFrameModel.DataFrameModel(summary)
-        self.overall_summary_table.setModel(model)
-        self.overall_summary_table.resizeColumnsToContents()
-        self.overall_summary_table.show()
+        self.summary_table.setModel(model)
+        self.summary_table.resizeColumnsToContents()
+        self.summary_table.show()
 
+    #   Allows user to open a file
     def open_file_dialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -89,17 +126,9 @@ class App(QWidget):
                                                   "MAT Files (*.mat)", options=options)
         if fileName:
             data = loadmat(fileName)
-            summary = self.diffusion_parameters.add_data(data)
-            self.load_summary_data_frame(summary)
-            self.create_segment_buttons()
-
-    def save_file_dialog(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getSaveFileName(self, "QFileDialog.getSaveFileName()", "",
-                                                  "All Files (*);;Text Files (*.txt)", options=options)
-        if fileName:
-            print(fileName)
+            summary = self.diffusion_parameters.set_data(data)
+            self.load_summary_table(summary)
+            self.create_region_selection()
 
 
 if __name__ == '__main__':
