@@ -1,0 +1,7 @@
+To run the diffusion parameter results viewer please run:
+
+pip install requirements.txt
+
+and then:
+
+python3 DiffusionParameterResultsViewer.py
