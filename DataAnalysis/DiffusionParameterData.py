@@ -66,12 +66,26 @@ class DiffusionParameterData:
     # Returns a summary triple for a given parameter and specified regions
     def get_parameter_regions_summary(self, param_name, regions):
         diffusion_param_values = self.get_parameter_regions_values(param_name, regions)
+        if param_name == "E2A":
+            diffusion_param_values = np.absolute(diffusion_param_values)
+
+        # Calculate data points
         param_values_as_series = pd.Series(diffusion_param_values)
-        return [param_name, param_values_as_series.mean(), param_values_as_series.std()]
+        mean = param_values_as_series.mean()
+        std = param_values_as_series.std()
+        quartiles = param_values_as_series.quantile([.25, .5, .75]).to_numpy()
+        summary = [param_name, mean, std, quartiles[1], quartiles[0], quartiles[2], quartiles[2] - quartiles[0]]
+
+        scale_params = ['E1', 'E2', 'E3']
+        if param_name in scale_params:
+            for i in range(1, len(summary)):
+                summary[i] *= 1000
+        return summary
 
     # Returns a summary panda data frame for all diffusion parameters in the given regions
     def get_regions_summary(self, regions):
-        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation']
+        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation', 'Median', 'Lower Quartile', 'Upper Quartile',
+                   'Interquartile Range']
         data = []
         for parameter in self.diffusion_parameters.keys():
             parameter_summary = self.get_parameter_regions_summary(parameter, regions)
