@@ -2,3 +2,4 @@ PyQt5==5.14.1
 scipy
 pandas==1.0.1
 numpy==1.18.1
+pyinstaller
