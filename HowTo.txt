@@ -10,4 +10,6 @@ To create executable:
 
 pip install requirements.txt
 
-pyinstaller --onefile --windowed --icon=rbht_nhs_logo.ico DiffusionParameterResultsViewer.py
+and then:
+
+python3 PyinstallerScript.py
