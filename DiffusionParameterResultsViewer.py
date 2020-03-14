@@ -10,6 +10,8 @@ from scipy.io import loadmat
 from DataAnalysis import DataFrameModel
 from DataAnalysis import DiffusionParameterData
 
+file_extension = '/result_images/exported_data/diffusion_parameters.mat'
+
 
 class App(QWidget):
 
@@ -122,13 +124,17 @@ class App(QWidget):
     def open_file_dialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open file", "",
-                                                  "MAT Files (*.mat)", options=options)
-        if fileName:
-            data = loadmat(fileName)
+        options |= QFileDialog.ShowDirsOnly
+        dialog = QFileDialog(self)
+        patient_data_directory = dialog.getExistingDirectory(self, 'Open Patient Data', options=options)
+        if patient_data_directory != '':
+            data = loadmat(patient_data_directory + file_extension)
             summary = self.diffusion_parameters.set_data(data)
             self.load_summary_table(summary)
-            self.create_region_selection()
+            if not self.region_buttons_show:
+                self.create_region_selection()
+            else:
+                self.update_selected_region_summary()
 
 
 if __name__ == '__main__':
