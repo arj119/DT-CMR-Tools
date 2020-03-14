@@ -74,18 +74,19 @@ class DiffusionParameterData:
         mean = param_values_as_series.mean()
         std = param_values_as_series.std()
         quartiles = param_values_as_series.quantile([.25, .5, .75]).to_numpy()
-        summary = [param_name, mean, std, quartiles[1], quartiles[0], quartiles[2], quartiles[2] - quartiles[0]]
+        summary = [param_name, mean, std, quartiles[1], quartiles[2] - quartiles[0], quartiles[0], quartiles[2]]
 
+        # Scale if necessary
         scale_params = ['E1', 'E2', 'E3']
         if param_name in scale_params:
             for i in range(1, len(summary)):
-                summary[i] *= 1000
+                summary[i] = summary[i] * 1000
         return summary
 
     # Returns a summary panda data frame for all diffusion parameters in the given regions
     def get_regions_summary(self, regions):
-        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation', 'Median', 'Lower Quartile', 'Upper Quartile',
-                   'Interquartile Range']
+        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation', 'Median', 'Interquartile Range',
+                   'Lower Quartile', 'Upper Quartile']
         data = []
         for parameter in self.diffusion_parameters.keys():
             parameter_summary = self.get_parameter_regions_summary(parameter, regions)

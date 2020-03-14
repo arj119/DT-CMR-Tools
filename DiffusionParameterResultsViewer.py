@@ -26,6 +26,7 @@ class App(QWidget):
         self.summary_table = QtWidgets.QTableView()
         self.selected_region_summary_table = QtWidgets.QTableView()
         self.region_selection_buttons = QButtonGroup()
+        self.region_buttons_show = False
         self.vbox2 = QVBoxLayout()
         self.init_ui()
 
@@ -75,6 +76,7 @@ class App(QWidget):
         box.setLayout(vbox)
         self.vbox2.addWidget(box)
         self.vbox2.addStretch(1)
+        self.region_buttons_show = True
 
     #   Creates region selection buttons
     def eventFilter(self, source, event):
