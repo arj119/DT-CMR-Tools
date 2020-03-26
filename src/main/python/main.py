@@ -23,11 +23,8 @@ class App(QWidget):
         self.top = 10
         self.width = 1920
         self.height = 1080
-        self.diffusion_parameters = dpd.DiffusionParameterData()
-        self.summary_table = QTableView()
-        self.selected_region_summary_table = QTableView()
-        self.region_selection_buttons = QButtonGroup()
-        self.region_buttons_show = False
+        self.patient_combined_diffusion_params = dpd.DiffusionParameterData()
+        self.patient_data_sets = dict()
         self.vbox2 = QVBoxLayout()
         self.hbox = QHBoxLayout()
         self.init_ui()
@@ -74,7 +71,7 @@ class App(QWidget):
         region_select_buttons.setExclusive(False)
 
         vbox2.addStretch(1)
-        self.create_region_selection(vbox2, region_select_buttons, regions_summary_table)
+        self.create_region_selection(vbox2, region_select_buttons, regions_summary_table, identifier)
         self.load_summary_table(data, summary_table)
         self.hbox.addLayout(vbox1)
         self.hbox.addLayout(vbox2)
@@ -86,7 +83,7 @@ class App(QWidget):
         return label
 
     #   Creates region selection buttons
-    def create_region_selection(self, widgetBox, buttonGroup, region_summary_table):
+    def create_region_selection(self, widgetBox, buttonGroup, region_summary_table, patient_identifier):
         box = QGroupBox("Regions")
         box.setStyleSheet("QGroupBox { border: 1px solid black;}")
         vbox = QVBoxLayout()
@@ -94,7 +91,8 @@ class App(QWidget):
         hbox = QHBoxLayout()
         for i in range(0, 12):
             check_box = QCheckBox(str(i + 1))
-            check_box.clicked.connect(partial(self.update_selected_region_summary, buttonGroup, region_summary_table))
+            check_box.clicked.connect(
+                partial(self.update_selected_region_summary, buttonGroup, region_summary_table, patient_identifier))
             vbox.addWidget(check_box)
             buttonGroup.addButton(check_box, i)
         hbox.addLayout(vbox)
@@ -129,9 +127,9 @@ class App(QWidget):
             QtWidgets.qApp.clipboard().setText(stream.getvalue())
 
     #   Updates selected region summary table
-    def update_selected_region_summary(self, region_buttons, region_summary_table):
+    def update_selected_region_summary(self, region_buttons, region_summary_table, patient_identifier):
         segments = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
-        segment_summary = self.diffusion_parameters.get_regions_summary(segments)
+        segment_summary = self.patient_data_sets[patient_identifier].get_regions_summary(segments)
         model = dfm.DataFrameModel(segment_summary)
         region_summary_table.setModel(model)
         region_summary_table.resizeColumnsToContents()
@@ -154,8 +152,10 @@ class App(QWidget):
         if patient_data_directory != '':
             try:
                 data = loadmat(patient_data_directory + file_extension)
-                summary = self.diffusion_parameters.set_data(data)
-                self.display_patient_data(os.path.basename(patient_data_directory), summary)
+                patient_identifier = os.path.basename(patient_data_directory)
+                self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
+                summary = self.patient_data_sets[patient_identifier].set_data(data)
+                self.display_patient_data(patient_identifier, summary)
             except:
                 error_dialog = QtWidgets.QErrorMessage()
                 error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
