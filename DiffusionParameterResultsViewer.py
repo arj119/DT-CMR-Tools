@@ -130,13 +130,19 @@ class App(QWidget):
         dialog = QFileDialog(self)
         patient_data_directory = dialog.getExistingDirectory(self, 'Open Patient Data', options=options)
         if patient_data_directory != '':
-            data = loadmat(patient_data_directory + file_extension)
-            summary = self.diffusion_parameters.set_data(data)
-            self.load_summary_table(summary)
-            if not self.region_buttons_show:
-                self.create_region_selection()
-            else:
-                self.update_selected_region_summary()
+            try:
+                data = loadmat(patient_data_directory + file_extension)
+                summary = self.diffusion_parameters.set_data(data)
+                self.load_summary_table(summary)
+                if not self.region_buttons_show:
+                    self.create_region_selection()
+                else:
+                    self.update_selected_region_summary()
+            except:
+                error_dialog = QtWidgets.QErrorMessage()
+                error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
+                                         f'parameters')
+                error_dialog.exec_()
 
 
 if __name__ == '__main__':
