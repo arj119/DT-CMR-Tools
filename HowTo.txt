@@ -4,7 +4,7 @@ pip install requirements.txt
 
 and then:
 
-python3 DiffusionParameterResultsViewer.py
+python DiffusionParameterResultsViewer.py
 
 To create executable:
 
@@ -12,4 +12,4 @@ pip install requirements.txt
 
 and then:
 
-python3 PyinstallerScript.py
+fbs freeze
