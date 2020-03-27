@@ -24,7 +24,9 @@ class App(QWidget):
         self.width = 1920
         self.height = 1080
         self.patient_combined_diffusion_params = dpd.DiffusionParameterData()
+        self.combined_patient_table = QTableView()
         self.patient_data_sets = dict()
+        self.patient_regions = dict()
         self.vbox2 = QVBoxLayout()
         self.hbox = QHBoxLayout()
         self.init_ui()
@@ -41,6 +43,8 @@ class App(QWidget):
         self.vbox2.addWidget(load_file_button)
         self.vbox2.addStretch(1)
         self.hbox.addLayout(self.vbox2)
+
+        self.display_combined_patient_summary()
 
         self.setLayout(self.hbox)
         self.show()
@@ -128,11 +132,14 @@ class App(QWidget):
 
     #   Updates selected region summary table
     def update_selected_region_summary(self, region_buttons, region_summary_table, patient_identifier):
-        segments = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
-        segment_summary = self.patient_data_sets[patient_identifier].get_regions_summary(segments)
-        model = dfm.DataFrameModel(segment_summary)
+        regions = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
+        regions_summary = self.patient_data_sets[patient_identifier].get_regions_summary(regions, patient_identifier)
+        self.patient_regions[patient_identifier] = regions
+        print(self.patient_regions)
+        model = dfm.DataFrameModel(regions_summary)
         region_summary_table.setModel(model)
         region_summary_table.resizeColumnsToContents()
+        self.update_combined()
 
     #   Loads data summary
     def load_summary_table(self, data, summary_table):
@@ -142,6 +149,25 @@ class App(QWidget):
         summary_table.show()
         return self.vbox2
 
+    def display_combined_patient_summary(self):
+        vbox1 = QVBoxLayout()
+        vbox2 = QVBoxLayout()
+
+        patient_identifier_label = self.create_label("combined", Qt.AlignCenter)
+        vbox1.addWidget(patient_identifier_label)
+
+        vbox1.addWidget(self.create_label("Diffusion Parameters Data Summary", Qt.AlignCenter))
+        self.combined_patient_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.combined_patient_table.installEventFilter(self)
+        vbox1.addWidget(self.combined_patient_table)
+
+        self.hbox.addLayout(vbox1)
+        self.hbox.addLayout(vbox2)
+
+    def update_combined(self):
+        summary = self.patient_combined_diffusion_params.get_combined_patient_regions_summary(self.patient_regions)
+        self.load_summary_table(summary, self.combined_patient_table)
+
     #   Allows user to open a file
     def open_file_dialog(self):
         options = QFileDialog.Options()
@@ -150,17 +176,18 @@ class App(QWidget):
         dialog = QFileDialog(self)
         patient_data_directory = dialog.getExistingDirectory(self, 'Open Patient Data', options=options)
         if patient_data_directory != '':
-            try:
-                data = loadmat(patient_data_directory + file_extension)
-                patient_identifier = os.path.basename(patient_data_directory)
-                self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
-                summary = self.patient_data_sets[patient_identifier].set_data(data)
-                self.display_patient_data(patient_identifier, summary)
-            except:
-                error_dialog = QtWidgets.QErrorMessage()
-                error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
-                                         f'parameters')
-                error_dialog.exec_()
+            # try:
+            data = loadmat(patient_data_directory + file_extension)
+            patient_identifier = os.path.basename(patient_data_directory)
+            self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
+            summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
+            self.patient_combined_diffusion_params.add_data(data, patient_identifier)
+            self.display_patient_data(patient_identifier, summary)
+            # except:
+            #     error_dialog = QtWidgets.QErrorMessage()
+            #     error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
+            #                              f'parameters')
+            #     error_dialog.exec_()
 
 
 if __name__ == '__main__':
