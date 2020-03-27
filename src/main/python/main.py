@@ -23,12 +23,13 @@ class App(QWidget):
         self.top = 10
         self.width = 1920
         self.height = 1080
-        self.patient_combined_diffusion_params = dpd.DiffusionParameterData()
+        self.combined_patients = dpd.DiffusionParameterData()
         self.combined_patient_table = QTableView()
         self.patient_data_sets = dict()
         self.patient_regions = dict()
         self.vbox2 = QVBoxLayout()
         self.hbox = QHBoxLayout()
+        self.patient_data_UIs = dict()
         self.init_ui()
 
     #   Initialises UI
@@ -36,12 +37,11 @@ class App(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-        load_file_button = QPushButton("Select File")
-        load_file_button.move(100, 100)
+        load_file_button = QPushButton("Add Patient")
         load_file_button.clicked.connect(self.open_file_dialog)
-
-        self.vbox2.addWidget(load_file_button)
-        self.vbox2.addStretch(1)
+        load_file_box = QHBoxLayout()
+        load_file_box.addWidget(load_file_button, 0, Qt.AlignLeading)
+        self.vbox2.addLayout(load_file_box)
         self.hbox.addLayout(self.vbox2)
 
         self.display_combined_patient_summary()
@@ -53,10 +53,20 @@ class App(QWidget):
     def display_patient_data(self, identifier, data):
         vbox1 = QVBoxLayout()
         vbox2 = QVBoxLayout()
+        self.patient_data_UIs[identifier] = [vbox1, vbox2]
 
+        # Remove Button
+        remove_button = QPushButton("Remove Patient")
+        remove_button.clicked.connect(partial(self.remove_data, identifier))
+        remove_box = QHBoxLayout()
+        remove_box.addWidget(remove_button, 0, Qt.AlignRight)
+        vbox1.addLayout(remove_box)
+
+        # Patient Label
         patient_identifier_label = self.create_label(identifier, Qt.AlignCenter)
         vbox1.addWidget(patient_identifier_label)
 
+        # Overall Summary Table
         vbox1.addWidget(self.create_label("Diffusion Parameters Data Summary", Qt.AlignCenter))
         summary_table = QTableView()
         summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -64,13 +74,14 @@ class App(QWidget):
         summary_table.setWindowTitle(identifier)
         vbox1.addWidget(summary_table)
 
+        # Regions Summary Table
         vbox1.addWidget(self.create_label("Selected Regions Summary", Qt.AlignCenter))
         regions_summary_table = QTableView()
         regions_summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         regions_summary_table.installEventFilter(self)
-        # regions_summary_table.hide()
         vbox1.addWidget(regions_summary_table)
 
+        # Regions Selection
         region_select_buttons = QButtonGroup()
         region_select_buttons.setExclusive(False)
 
@@ -90,8 +101,11 @@ class App(QWidget):
     def create_region_selection(self, widgetBox, buttonGroup, region_summary_table, patient_identifier):
         box = QGroupBox("Regions")
         box.setStyleSheet("QGroupBox { border: 1px solid black;}")
+
         vbox = QVBoxLayout()
         vbox.addSpacing(20)
+
+        # Create check box buttons
         hbox = QHBoxLayout()
         for i in range(0, 12):
             check_box = QCheckBox(str(i + 1))
@@ -100,10 +114,10 @@ class App(QWidget):
             vbox.addWidget(check_box)
             buttonGroup.addButton(check_box, i)
         hbox.addLayout(vbox)
+
         box.setLayout(hbox)
         widgetBox.addWidget(box)
         widgetBox.addStretch(1)
-        self.region_buttons_show = True
 
     #   Creates region selection buttons
     def eventFilter(self, source, event):
@@ -133,10 +147,11 @@ class App(QWidget):
     #   Updates selected region summary table
     def update_selected_region_summary(self, region_buttons, region_summary_table, patient_identifier):
         regions = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
+
         regions_summary = self.patient_data_sets[patient_identifier].get_regions_summary(regions, patient_identifier)
         self.patient_regions[patient_identifier] = regions
-        print(self.patient_regions)
         model = dfm.DataFrameModel(regions_summary)
+
         region_summary_table.setModel(model)
         region_summary_table.resizeColumnsToContents()
         self.update_combined()
@@ -149,24 +164,39 @@ class App(QWidget):
         summary_table.show()
         return self.vbox2
 
+    # Displays combined patient summary section
     def display_combined_patient_summary(self):
-        vbox1 = QVBoxLayout()
-        vbox2 = QVBoxLayout()
-
-        patient_identifier_label = self.create_label("combined", Qt.AlignCenter)
-        vbox1.addWidget(patient_identifier_label)
-
-        vbox1.addWidget(self.create_label("Diffusion Parameters Data Summary", Qt.AlignCenter))
+        patient_identifier_label = self.create_label("Combined Patient Summary", Qt.AlignCenter)
         self.combined_patient_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.combined_patient_table.installEventFilter(self)
-        vbox1.addWidget(self.combined_patient_table)
+        self.vbox2.addWidget(patient_identifier_label)
+        self.vbox2.addWidget(self.combined_patient_table)
+        self.vbox2.addStretch(0)
 
-        self.hbox.addLayout(vbox1)
-        self.hbox.addLayout(vbox2)
-
+    # Updates combined patient summary section
     def update_combined(self):
-        summary = self.patient_combined_diffusion_params.get_combined_patient_regions_summary(self.patient_regions)
+        summary = self.combined_patients.get_combined_patient_regions_summary(self.patient_regions)
         self.load_summary_table(summary, self.combined_patient_table)
+
+    # Removes patient data
+    def remove_data(self, identifier):
+        self.patient_data_sets.pop(identifier)
+        if identifier in self.patient_regions:
+            self.patient_regions.pop(identifier)
+        self.combined_patients.remove_patient_data(identifier)
+        for box in self.patient_data_UIs[identifier]:
+            self.clear_layout(box)
+        self.update_combined()
+
+    # Clears UI Layout of widgets and sub-layouts
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget() is not None:
+                    child.widget().deleteLater()
+                elif child.layout() is not None:
+                    self.clear_layout(child.layout())
 
     #   Allows user to open a file
     def open_file_dialog(self):
@@ -175,19 +205,23 @@ class App(QWidget):
         options |= QFileDialog.ShowDirsOnly
         dialog = QFileDialog(self)
         patient_data_directory = dialog.getExistingDirectory(self, 'Open Patient Data', options=options)
+
         if patient_data_directory != '':
-            # try:
-            data = loadmat(patient_data_directory + file_extension)
-            patient_identifier = os.path.basename(patient_data_directory)
-            self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
-            summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
-            self.patient_combined_diffusion_params.add_data(data, patient_identifier)
-            self.display_patient_data(patient_identifier, summary)
-            # except:
-            #     error_dialog = QtWidgets.QErrorMessage()
-            #     error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
-            #                              f'parameters')
-            #     error_dialog.exec_()
+            try:
+                patient_identifier = os.path.basename(patient_data_directory)
+                if patient_identifier not in self.patient_data_sets:
+                    data = loadmat(patient_data_directory + file_extension)
+
+                    self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
+                    summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
+
+                    self.display_patient_data(patient_identifier, summary)
+                    self.combined_patients.add_data(data, patient_identifier)
+            except:
+                error_dialog = QtWidgets.QErrorMessage()
+                error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
+                                         f'parameters')
+                error_dialog.exec_()
 
 
 if __name__ == '__main__':

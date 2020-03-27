@@ -13,25 +13,11 @@ def __flatten__(list):
 # Data analysis class for diffusion parameter data
 class DiffusionParameterData:
     def __init__(self):
-        self.data = dict
-        self.diffusion_parameters = dict
         self.patient_entries = {}
         self.summary = pd.DataFrame()
 
     def __call__(self):
         return self.summary
-
-    # # Sets class members
-    # def set_data(self, data, patient_identifier):
-    #     self.data = {key.replace(column_ending, ""): value for (key, value) in data.items() if
-    #                  key.endswith(column_ending)}
-    #     self.diffusion_parameters = {key: self.get_diffusion_parameter(key, self.data) for key in self.data.keys() if
-    #                                  key in supported_diffusion_parameters}
-    #
-    #     self.patient_entries[patient_identifier] = self.diffusion_parameters
-    #
-    #     self.summary = self.get_regions_summary(range(0, 12))
-    #     return self.summary
 
     # Sets class members
     def add_data(self, data, patient_identifier):
@@ -58,36 +44,6 @@ class DiffusionParameterData:
         for i in regions:
             values.append(diffusion_param.at[i, 'values'][0].tolist())
         return __flatten__(values)
-
-    # Returns a summary triple for a given parameter and specified regions
-    def get_parameter_regions_summary(self, param_name, regions, patient_identifier):
-        diffusion_param_values = np.array(self.get_parameter_regions_values(param_name, regions, patient_identifier))
-        if param_name == "E2A":
-            diffusion_param_values = np.absolute(diffusion_param_values)
-
-        # Calculate data points
-        param_values_as_series = pd.Series(diffusion_param_values)
-        mean = param_values_as_series.mean()
-        std = param_values_as_series.std()
-        quartiles = param_values_as_series.quantile([.25, .5, .75]).to_numpy()
-        summary = [param_name, mean, std, quartiles[1], quartiles[2] - quartiles[0], quartiles[0], quartiles[2]]
-
-        # Scale if necessary
-        scale_params = ['E1', 'E2', 'E3']
-        if param_name in scale_params:
-            for i in range(1, len(summary)):
-                summary[i] = summary[i] * 1000
-        return summary
-
-    # Returns a summary panda data frame for all diffusion parameters in the given regions
-    def get_regions_summary(self, regions, patient_identifier):
-        columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation', 'Median', 'Interquartile Range',
-                   'Lower Quartile', 'Upper Quartile']
-        data = []
-        for parameter in supported_diffusion_parameters:
-            parameter_summary = self.get_parameter_regions_summary(parameter, regions, patient_identifier)
-            data.append(parameter_summary)
-        return pd.DataFrame(data, columns=columns)
 
     def get_combined_param_values(self, param_name, patient_to_regions):
         values = []
@@ -122,3 +78,10 @@ class DiffusionParameterData:
             parameter_summary = self.get_combined_param_region_summary(parameter, patient_to_regions)
             data.append(parameter_summary)
         return pd.DataFrame(data, columns=columns)
+
+    # Returns a summary panda data frame for all diffusion parameters in the given regions
+    def get_regions_summary(self, regions, patient_identifier):
+        return self.get_combined_patient_regions_summary({patient_identifier: regions})
+
+    def remove_patient_data(self, patient_identifier):
+        self.patient_entries.pop(patient_identifier)
