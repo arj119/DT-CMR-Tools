@@ -55,16 +55,22 @@ class App(QWidget):
         vbox2 = QVBoxLayout()
         self.patient_data_UIs[identifier] = [vbox1, vbox2]
 
+        small_hbox = QHBoxLayout()
+        small_vbox1 = QVBoxLayout()
+
+        # Patient Label
+        patient_identifier_label = self.create_title(f'Patient: {identifier}', Qt.AlignCenter)
+        small_vbox1.addWidget(patient_identifier_label, 0, Qt.AlignLeft)
+
         # Remove Button
         remove_button = QPushButton("Remove Patient")
         remove_button.clicked.connect(partial(self.remove_data, identifier))
-        remove_box = QHBoxLayout()
+        remove_box = QVBoxLayout()
         remove_box.addWidget(remove_button, 0, Qt.AlignRight)
-        vbox1.addLayout(remove_box)
 
-        # Patient Label
-        patient_identifier_label = self.create_label(identifier, Qt.AlignCenter)
-        vbox1.addWidget(patient_identifier_label)
+        small_hbox.addLayout(small_vbox1)
+        small_hbox.addLayout(remove_box)
+        vbox1.addLayout(small_hbox)
 
         # Overall Summary Table
         vbox1.addWidget(self.create_label("Diffusion Parameters Data Summary", Qt.AlignCenter))
@@ -91,10 +97,16 @@ class App(QWidget):
         self.hbox.addLayout(vbox1)
         self.hbox.addLayout(vbox2)
 
+    def create_title(self, text, alignment):
+        label = self.create_label(text, alignment)
+        label.setStyleSheet("font-weight: bold; font-size: 16pt")
+        return label
+
     def create_label(self, text, alignment):
         label = QLabel()
         label.setText(text)
         label.setAlignment(alignment)
+        label.setStyleSheet("font-size: 13pt")
         return label
 
     #   Creates region selection buttons
