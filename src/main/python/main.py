@@ -7,7 +7,7 @@ from DataAnalysis import DataFrameModel as dfm, DiffusionParameterData as dpd
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QAbstractItemView, QButtonGroup, QCheckBox, \
-    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel
+    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel, QTabWidget
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from scipy.io import loadmat
 
@@ -23,13 +23,15 @@ class App(QWidget):
         self.top = 10
         self.width = 1920
         self.height = 1080
-        self.combined_patients = dpd.DiffusionParameterData()
+        self.combined_patients_data = dpd.DiffusionParameterData()
         self.combined_patient_table = QTableView()
+        self.combined_patients = set()
         self.patient_data_sets = dict()
         self.patient_regions = dict()
+        self.patient_data_UIs = dict()
+        self.tabs = QTabWidget()
         self.vbox2 = QVBoxLayout()
         self.hbox = QHBoxLayout()
-        self.patient_data_UIs = dict()
         self.init_ui()
 
     #   Initialises UI
@@ -44,32 +46,41 @@ class App(QWidget):
         self.vbox2.addLayout(load_file_box)
         self.hbox.addLayout(self.vbox2)
 
+        self.hbox.addWidget(self.tabs)
+
         self.display_combined_patient_summary()
 
         self.setLayout(self.hbox)
         self.show()
 
     # Method to add patient data summary to window
-    def display_patient_data(self, identifier, data):
+    def display_patient_data(self, patient_identifier, data):
+        tab = QWidget()
+        tab_layout = QHBoxLayout()
         vbox1 = QVBoxLayout()
         vbox2 = QVBoxLayout()
-        self.patient_data_UIs[identifier] = [vbox1, vbox2]
-
+        self.patient_data_UIs[patient_identifier] = [vbox1, vbox2]
         small_hbox = QHBoxLayout()
-        small_vbox1 = QVBoxLayout()
+        title_box = QVBoxLayout()
 
         # Patient Label
-        patient_identifier_label = self.create_title(f'Patient: {identifier}', Qt.AlignCenter)
-        small_vbox1.addWidget(patient_identifier_label, 0, Qt.AlignLeft)
+        patient_identifier_label = self.create_title(f'Patient: {patient_identifier}', Qt.AlignCenter)
+        title_box.addWidget(patient_identifier_label, 0, Qt.AlignLeft)
+
+        # Combine Button
+        combine_button = QPushButton("Combine Data")
+        combine_button.setCheckable(True)
+        combine_button.clicked[bool].connect(partial(self.combine_data, patient_identifier))
 
         # Remove Button
         remove_button = QPushButton("Remove Patient")
-        remove_button.clicked.connect(partial(self.remove_data, identifier))
-        remove_box = QVBoxLayout()
-        remove_box.addWidget(remove_button, 0, Qt.AlignRight)
+        remove_button.clicked.connect(partial(self.remove_data, patient_identifier))
+        button_box = QHBoxLayout()
+        button_box.addWidget(combine_button)
+        button_box.addWidget(remove_button)
 
-        small_hbox.addLayout(small_vbox1)
-        small_hbox.addLayout(remove_box)
+        small_hbox.addLayout(title_box)
+        small_hbox.addLayout(button_box)
         vbox1.addLayout(small_hbox)
 
         # Overall Summary Table
@@ -77,7 +88,7 @@ class App(QWidget):
         summary_table = QTableView()
         summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         summary_table.installEventFilter(self)
-        summary_table.setWindowTitle(identifier)
+        summary_table.setWindowTitle(patient_identifier)
         vbox1.addWidget(summary_table)
 
         # Regions Summary Table
@@ -92,10 +103,13 @@ class App(QWidget):
         region_select_buttons.setExclusive(False)
 
         vbox2.addStretch(1)
-        self.create_region_selection(vbox2, region_select_buttons, regions_summary_table, identifier)
+        self.create_region_selection(vbox2, region_select_buttons, regions_summary_table, patient_identifier)
         self.load_summary_table(data, summary_table)
-        self.hbox.addLayout(vbox1)
-        self.hbox.addLayout(vbox2)
+        tab_layout.addLayout(vbox1)
+        tab_layout.addLayout(vbox2)
+        tab.setLayout(tab_layout)
+        self.tabs.addTab(tab, patient_identifier)
+        self.resize_tabs()
 
     def create_title(self, text, alignment):
         label = self.create_label(text, alignment)
@@ -178,7 +192,7 @@ class App(QWidget):
 
     # Displays combined patient summary section
     def display_combined_patient_summary(self):
-        patient_identifier_label = self.create_label("Combined Patient Summary", Qt.AlignCenter)
+        patient_identifier_label = self.create_title("Combined Patient Summary", Qt.AlignCenter)
         self.combined_patient_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.combined_patient_table.installEventFilter(self)
         self.vbox2.addWidget(patient_identifier_label)
@@ -187,17 +201,29 @@ class App(QWidget):
 
     # Updates combined patient summary section
     def update_combined(self):
-        summary = self.combined_patients.get_combined_patient_regions_summary(self.patient_regions)
+        combined_patient_regions = {patient_identifier: regions for (patient_identifier, regions) in
+                                    self.patient_regions.items()
+                                    if patient_identifier in self.combined_patients}
+        summary = self.combined_patients_data.get_combined_patient_regions_summary(combined_patient_regions)
         self.load_summary_table(summary, self.combined_patient_table)
 
     # Removes patient data
-    def remove_data(self, identifier):
-        self.patient_data_sets.pop(identifier)
-        if identifier in self.patient_regions:
-            self.patient_regions.pop(identifier)
-        self.combined_patients.remove_patient_data(identifier)
-        for box in self.patient_data_UIs[identifier]:
+    def remove_data(self, patient_identifier):
+        self.patient_data_sets.pop(patient_identifier)
+        if patient_identifier in self.patient_regions:
+            self.patient_regions.pop(patient_identifier)
+        self.combined_patients_data.remove_patient_data(patient_identifier)
+        for box in self.patient_data_UIs[patient_identifier]:
             self.clear_layout(box)
+        self.tabs.currentWidget().deleteLater()
+        self.update_combined()
+
+    # Combines patient data and presents summary
+    def combine_data(self, patient_identifier, toggled):
+        if toggled:
+            self.combined_patients.add(patient_identifier)
+        else:
+            self.combined_patients.remove(patient_identifier)
         self.update_combined()
 
     # Clears UI Layout of widgets and sub-layouts
@@ -209,6 +235,11 @@ class App(QWidget):
                     child.widget().deleteLater()
                 elif child.layout() is not None:
                     self.clear_layout(child.layout())
+
+    def resize_tabs(self):
+        count = self.tabs.count()
+        font_size = 12 - (count // 5) * 3
+        self.tabs.setStyleSheet('QTabBar { font-size: ' + str(font_size) + 'pt; }')
 
     #   Allows user to open a file
     def open_file_dialog(self):
@@ -228,7 +259,7 @@ class App(QWidget):
                     summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
 
                     self.display_patient_data(patient_identifier, summary)
-                    self.combined_patients.add_data(data, patient_identifier)
+                    self.combined_patients_data.add_data(data, patient_identifier)
             except:
                 error_dialog = QtWidgets.QErrorMessage()
                 error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
