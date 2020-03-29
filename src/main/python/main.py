@@ -204,7 +204,7 @@ class App(QWidget):
         vbox.addWidget(self.create_title('Combined Patient Summary Breakdown', Qt.AlignCenter))
         vbox.addWidget(self.combined_patients_table)
         self.combined_patients_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.combined_patients_table.doubleClicked.connect(self.open_patient_tab)
+        self.combined_patients_table.clicked.connect(self.open_patient_tab)
         hbox = QHBoxLayout()
         hbox.addLayout(vbox)
         hbox.addStretch(0)
@@ -214,9 +214,9 @@ class App(QWidget):
 
     def open_patient_tab(self):
         selection = self.combined_patients_table.selectedIndexes()
-
-        if selection:
-            self.tabs.setCurrentWidget(self.tabs.findChild(QWidget, str(selection[0].data())))
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i) == selection[0].data():
+                self.tabs.setCurrentIndex(i)
 
     # Updates combined patient summary section
     def update_combined(self):
@@ -237,7 +237,6 @@ class App(QWidget):
     # Removes patient data
     def remove_data(self, index):
         patient_identifier = self.tabs.tabText(index)
-        print(patient_identifier)
         self.patient_data_sets.pop(patient_identifier)
         if patient_identifier in self.patient_regions:
             self.patient_regions.pop(patient_identifier)
