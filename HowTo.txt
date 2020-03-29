@@ -4,7 +4,7 @@ pip install requirements.txt
 
 and then:
 
-python DiffusionParameterResultsViewer.py
+fbs run
 
 To create executable:
 
