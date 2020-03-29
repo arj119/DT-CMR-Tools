@@ -8,7 +8,7 @@ from DataAnalysis import DataFrameModel as dfm, DiffusionParameterData as dpd
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QAbstractItemView, QButtonGroup, QCheckBox, \
-    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel, QTabWidget
+    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel, QTabWidget, QTreeView, QListView
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from scipy.io import loadmat
 
@@ -47,6 +47,11 @@ class App(QWidget):
         self.vbox2.addLayout(load_file_box)
         self.hbox.addLayout(self.vbox2)
 
+        self.tabs.setTabBarAutoHide(True)
+        self.tabs.setTabsClosable(True)
+        self.tabs.setMovable(True)
+        self.tabs.setUsesScrollButtons(True)
+        self.tabs.tabCloseRequested.connect(lambda index: self.remove_data(index))
         self.hbox.addWidget(self.tabs)
 
         self.display_combined_patient_summary()
@@ -72,13 +77,8 @@ class App(QWidget):
         combine_button = QPushButton("Combine Data")
         combine_button.setCheckable(True)
         combine_button.clicked[bool].connect(partial(self.combine_data, patient_identifier))
-
-        # Remove Button
-        remove_button = QPushButton("Remove Patient")
-        remove_button.clicked.connect(partial(self.remove_data, patient_identifier))
         button_box = QHBoxLayout()
-        button_box.addWidget(combine_button)
-        button_box.addWidget(remove_button)
+        button_box.addWidget(combine_button, 0, Qt.AlignRight)
 
         small_hbox.addLayout(title_box)
         small_hbox.addLayout(button_box)
@@ -110,7 +110,6 @@ class App(QWidget):
         tab_layout.addLayout(vbox2)
         tab.setLayout(tab_layout)
         self.tabs.addTab(tab, patient_identifier)
-        self.resize_tabs()
 
     # Creates a title object
     def create_title(self, text, alignment):
@@ -200,14 +199,24 @@ class App(QWidget):
         self.combined_patient_summary_table.installEventFilter(self)
         self.vbox2.addWidget(patient_identifier_label)
         self.vbox2.addWidget(self.combined_patient_summary_table)
+
         vbox = QVBoxLayout()
         vbox.addWidget(self.create_title('Combined Patient Summary Breakdown', Qt.AlignCenter))
         vbox.addWidget(self.combined_patients_table)
+        self.combined_patients_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.combined_patients_table.doubleClicked.connect(self.open_patient_tab)
         hbox = QHBoxLayout()
         hbox.addLayout(vbox)
         hbox.addStretch(0)
+
         self.vbox2.addLayout(hbox)
         self.update_combined()
+
+    def open_patient_tab(self):
+        selection = self.combined_patients_table.selectedIndexes()
+
+        if selection:
+            self.tabs.setCurrentWidget(self.tabs.findChild(QWidget, str(selection[0].data())))
 
     # Updates combined patient summary section
     def update_combined(self):
@@ -226,14 +235,17 @@ class App(QWidget):
                              self.combined_patients_table)
 
     # Removes patient data
-    def remove_data(self, patient_identifier):
+    def remove_data(self, index):
+        patient_identifier = self.tabs.tabText(index)
+        print(patient_identifier)
         self.patient_data_sets.pop(patient_identifier)
         if patient_identifier in self.patient_regions:
             self.patient_regions.pop(patient_identifier)
         self.combined_patients_summary_data.remove_patient_data(patient_identifier)
         for box in self.patient_data_UIs[patient_identifier]:
             self.clear_layout(box)
-        self.tabs.currentWidget().deleteLater()
+        # self.tabs.currentWidget().deleteLater()
+        self.tabs.removeTab(index)
         self.update_combined()
 
     # Combines patient data and presents summary
@@ -260,30 +272,41 @@ class App(QWidget):
         font_size = 12 - (count // 5) * 3
         self.tabs.setStyleSheet('QTabBar { font-size: ' + str(font_size) + 'pt; }')
 
-    #   Allows user to open a file
+    #   Allows user to open directories
     def open_file_dialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         options |= QFileDialog.ShowDirsOnly
         dialog = QFileDialog(self)
-        patient_data_directory = dialog.getExistingDirectory(self, 'Open Patient Data', options=options)
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        dialog.setOptions(options)
+        file_view = dialog.findChild(QListView, 'listView')
 
-        if patient_data_directory != '':
-            try:
-                patient_identifier = os.path.basename(patient_data_directory)
-                if patient_identifier not in self.patient_data_sets:
-                    data = loadmat(patient_data_directory + file_extension)
+        # to make it possible to select multiple directories:
+        if file_view:
+            file_view.setSelectionMode(QAbstractItemView.MultiSelection)
+        f_tree_view = dialog.findChild(QTreeView)
+        if f_tree_view:
+            f_tree_view.setSelectionMode(QAbstractItemView.MultiSelection)
 
-                    self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
-                    summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
-                    self.patient_regions[patient_identifier] = []
-                    self.display_patient_data(patient_identifier, summary)
-                    self.combined_patients_summary_data.add_data(data, patient_identifier)
-            except:
-                error_dialog = QtWidgets.QErrorMessage()
-                error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
-                                         f'parameters')
-                error_dialog.exec_()
+        if dialog.exec():
+            paths = dialog.selectedFiles()
+            for patient_data_directory in paths:
+                try:
+                    patient_identifier = os.path.basename(patient_data_directory)
+                    if patient_identifier not in self.patient_data_sets:
+                        data = loadmat(patient_data_directory + file_extension)
+
+                        self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
+                        summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
+                        self.patient_regions[patient_identifier] = []
+                        self.display_patient_data(patient_identifier, summary)
+                        self.combined_patients_summary_data.add_data(data, patient_identifier)
+                except:
+                    error_dialog = QtWidgets.QErrorMessage()
+                    error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
+                                             f'parameters')
+                    error_dialog.exec_()
 
 
 if __name__ == '__main__':
