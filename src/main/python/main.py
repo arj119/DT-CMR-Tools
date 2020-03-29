@@ -3,6 +3,7 @@ import io
 import os
 from functools import partial
 
+import pandas as pd
 from DataAnalysis import DataFrameModel as dfm, DiffusionParameterData as dpd
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -15,7 +16,6 @@ file_extension = '/result_images/exported_data/diffusion_parameters.mat'
 
 
 class App(QWidget):
-
     def __init__(self):
         super().__init__()
         self.title = 'Diffusion Parameter Results Viewer'
@@ -23,9 +23,10 @@ class App(QWidget):
         self.top = 10
         self.width = 1920
         self.height = 1080
-        self.combined_patients_data = dpd.DiffusionParameterData()
-        self.combined_patient_table = QTableView()
+        self.combined_patients_summary_data = dpd.DiffusionParameterData()
+        self.combined_patient_summary_table = QTableView()
         self.combined_patients = set()
+        self.combined_patients_table = QTableView()
         self.patient_data_sets = dict()
         self.patient_regions = dict()
         self.patient_data_UIs = dict()
@@ -104,18 +105,20 @@ class App(QWidget):
 
         vbox2.addStretch(1)
         self.create_region_selection(vbox2, region_select_buttons, regions_summary_table, patient_identifier)
-        self.load_summary_table(data, summary_table)
+        self.load_table_view(data, summary_table)
         tab_layout.addLayout(vbox1)
         tab_layout.addLayout(vbox2)
         tab.setLayout(tab_layout)
         self.tabs.addTab(tab, patient_identifier)
         self.resize_tabs()
 
+    # Creates a title object
     def create_title(self, text, alignment):
         label = self.create_label(text, alignment)
         label.setStyleSheet("font-weight: bold; font-size: 16pt")
         return label
 
+    # Creates a label object
     def create_label(self, text, alignment):
         label = QLabel()
         label.setText(text)
@@ -182,37 +185,52 @@ class App(QWidget):
         region_summary_table.resizeColumnsToContents()
         self.update_combined()
 
-    #   Loads data summary
-    def load_summary_table(self, data, summary_table):
+    #   Loads data into table view
+    def load_table_view(self, data, table):
         model = dfm.DataFrameModel(data)
-        summary_table.setModel(model)
-        summary_table.resizeColumnsToContents()
-        summary_table.show()
+        table.setModel(model)
+        table.resizeColumnsToContents()
+        table.show()
         return self.vbox2
 
     # Displays combined patient summary section
     def display_combined_patient_summary(self):
         patient_identifier_label = self.create_title("Combined Patient Summary", Qt.AlignCenter)
-        self.combined_patient_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.combined_patient_table.installEventFilter(self)
+        self.combined_patient_summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.combined_patient_summary_table.installEventFilter(self)
         self.vbox2.addWidget(patient_identifier_label)
-        self.vbox2.addWidget(self.combined_patient_table)
-        self.vbox2.addStretch(0)
+        self.vbox2.addWidget(self.combined_patient_summary_table)
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.create_title('Combined Patient Summary Breakdown', Qt.AlignCenter))
+        vbox.addWidget(self.combined_patients_table)
+        hbox = QHBoxLayout()
+        hbox.addLayout(vbox)
+        hbox.addStretch(0)
+        self.vbox2.addLayout(hbox)
+        self.update_combined()
 
     # Updates combined patient summary section
     def update_combined(self):
         combined_patient_regions = {patient_identifier: regions for (patient_identifier, regions) in
                                     self.patient_regions.items()
                                     if patient_identifier in self.combined_patients}
-        summary = self.combined_patients_data.get_combined_patient_regions_summary(combined_patient_regions)
-        self.load_summary_table(summary, self.combined_patient_table)
+
+        # Combined patient summary table update
+        summary = self.combined_patients_summary_data.get_combined_patient_regions_summary(combined_patient_regions)
+        self.load_table_view(summary, self.combined_patient_summary_table)
+
+        # Combined patients table update
+        data = [[patient_identifier, [i + 1 for i in regions]] for (patient_identifier, regions) in
+                combined_patient_regions.items()]
+        self.load_table_view(pd.DataFrame(data, columns=['Patients', 'Regions']),
+                             self.combined_patients_table)
 
     # Removes patient data
     def remove_data(self, patient_identifier):
         self.patient_data_sets.pop(patient_identifier)
         if patient_identifier in self.patient_regions:
             self.patient_regions.pop(patient_identifier)
-        self.combined_patients_data.remove_patient_data(patient_identifier)
+        self.combined_patients_summary_data.remove_patient_data(patient_identifier)
         for box in self.patient_data_UIs[patient_identifier]:
             self.clear_layout(box)
         self.tabs.currentWidget().deleteLater()
@@ -236,6 +254,7 @@ class App(QWidget):
                 elif child.layout() is not None:
                     self.clear_layout(child.layout())
 
+    # Resizes tabs as number increases
     def resize_tabs(self):
         count = self.tabs.count()
         font_size = 12 - (count // 5) * 3
@@ -257,9 +276,9 @@ class App(QWidget):
 
                     self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
                     summary = self.patient_data_sets[patient_identifier].add_data(data, patient_identifier)
-
+                    self.patient_regions[patient_identifier] = []
                     self.display_patient_data(patient_identifier, summary)
-                    self.combined_patients_data.add_data(data, patient_identifier)
+                    self.combined_patients_summary_data.add_data(data, patient_identifier)
             except:
                 error_dialog = QtWidgets.QErrorMessage()
                 error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
