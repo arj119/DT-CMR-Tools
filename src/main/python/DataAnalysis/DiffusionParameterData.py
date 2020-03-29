@@ -45,12 +45,14 @@ class DiffusionParameterData:
             values.append(diffusion_param.at[i, 'values'][0].tolist())
         return __flatten__(values)
 
+    # Returns a combined list of values for a diffusion parameter given patients and their regions
     def get_combined_param_values(self, param_name, patient_to_regions):
         values = []
         for patient_identifier, regions in patient_to_regions.items():
             values.append(self.get_parameter_regions_values(param_name, regions, patient_identifier))
         return __flatten__(values)
 
+    # Returns a summary entry for given diffusion parameter for each patient and the selected regions
     def get_combined_param_region_summary(self, param_name, patient_to_regions):
         diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
         if param_name == "E2A":
@@ -70,6 +72,8 @@ class DiffusionParameterData:
                 summary[i] = summary[i] * 1000
         return summary
 
+    # Returns a summary panda data frame for all diffusion parameters in the given dictionary of
+    # patient identifiers to regions
     def get_combined_patient_regions_summary(self, patient_to_regions):
         columns = ['Diffusion Parameter', 'Mean', 'Standard Deviation', 'Median', 'Interquartile Range',
                    'Lower Quartile', 'Upper Quartile']
@@ -79,9 +83,10 @@ class DiffusionParameterData:
             data.append(parameter_summary)
         return pd.DataFrame(data, columns=columns)
 
-    # Returns a summary panda data frame for all diffusion parameters in the given regions
+    # Returns a summary panda data frame for all diffusion parameters in the given regions of the given patient
     def get_regions_summary(self, regions, patient_identifier):
         return self.get_combined_patient_regions_summary({patient_identifier: regions})
 
+    # Removes patient data
     def remove_patient_data(self, patient_identifier):
         self.patient_entries.pop(patient_identifier)
