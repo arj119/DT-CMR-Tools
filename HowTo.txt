@@ -1,15 +1,8 @@
+Firstly install dependencies via:
+pip install -r requirements.txt
+
 To run the diffusion parameter results viewer please run:
-
-pip install requirements.txt
-
-and then:
-
 fbs run
 
 To create executable:
-
-pip install requirements.txt
-
-and then:
-
 fbs freeze
