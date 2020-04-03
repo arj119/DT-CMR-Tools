@@ -14,6 +14,7 @@ def __flatten__(list):
 class DiffusionParameterData:
     def __init__(self):
         self.patient_entries = {}
+        self.patient_global = {}
         self.summary = pd.DataFrame()
 
     def __call__(self):
@@ -28,8 +29,9 @@ class DiffusionParameterData:
                                     key in supported_diffusion_parameters}
 
             self.patient_entries[patient_identifier] = diffusion_parameters
+            self.patient_global[patient_identifier] = range(0, 12)
             self.summary = self.get_regions_summary(range(0, 12), patient_identifier)
-        return self.summary
+        return self.get_combined_global_summary()
 
     # Gets diffusion parameter
     def get_diffusion_parameter(self, param_name, raw):
@@ -83,6 +85,11 @@ class DiffusionParameterData:
             data.append(parameter_summary)
         return pd.DataFrame(data, columns=columns)
 
+    # Returns a summary panda data frame for all diffusion parameters in the given dictionary of
+    # all patient identifiers
+    def get_combined_global_summary(self):
+        return self.get_combined_patient_regions_summary(self.patient_global)
+
     # Returns a summary panda data frame for all diffusion parameters in the given regions of the given patient
     def get_regions_summary(self, regions, patient_identifier):
         return self.get_combined_patient_regions_summary({patient_identifier: regions})
@@ -90,3 +97,4 @@ class DiffusionParameterData:
     # Removes patient data
     def remove_patient_data(self, patient_identifier):
         self.patient_entries.pop(patient_identifier)
+        self.patient_global.pop(patient_identifier)
