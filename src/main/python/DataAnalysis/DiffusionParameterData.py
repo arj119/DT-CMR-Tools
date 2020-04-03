@@ -15,10 +15,6 @@ class DiffusionParameterData:
     def __init__(self):
         self.patient_entries = {}
         self.patient_global = {}
-        self.summary = pd.DataFrame()
-
-    def __call__(self):
-        return self.summary
 
     # Sets class members
     def add_data(self, data, patient_identifier):
@@ -30,7 +26,6 @@ class DiffusionParameterData:
 
             self.patient_entries[patient_identifier] = diffusion_parameters
             self.patient_global[patient_identifier] = range(0, 12)
-            self.summary = self.get_regions_summary(range(0, 12), patient_identifier)
         return self.get_combined_global_summary()
 
     # Gets diffusion parameter

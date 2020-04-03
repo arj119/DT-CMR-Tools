@@ -273,12 +273,6 @@ class App(QWidget):
                 elif child.layout() is not None:
                     self.clear_layout(child.layout())
 
-    # Resizes tabs as number increases
-    def resize_tabs(self):
-        count = self.tabs.count()
-        font_size = 12 - (count // 5) * 3
-        self.tabs.setStyleSheet('QTabBar { font-size: ' + str(font_size) + 'pt; }')
-
     # Loads data to window
     def load_data(self, patient_identifier, data):
         self.patient_data_sets[patient_identifier] = dpd.DiffusionParameterData()
