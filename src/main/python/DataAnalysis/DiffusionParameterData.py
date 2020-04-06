@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 
 column_ending = '_12_seg'
 supported_diffusion_parameters = ['E1', 'E2', 'E3', 'FA', 'MD', 'MODE',
-                                  'HA', 'E2A', 'IA']
+                                  'HA', 'E2A', 'IA', 'TA']
 
 
 def __flatten__(list):
@@ -52,14 +53,14 @@ class DiffusionParameterData:
     # Returns a summary entry for given diffusion parameter for each patient and the selected regions
     def get_combined_param_region_summary(self, param_name, patient_to_regions):
         diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
-        if param_name == "E2A":
+        if param_name == 'E2A' or param_name == 'TA':
             diffusion_param_values = np.absolute(diffusion_param_values)
 
         # Calculate data points
         param_values_as_series = pd.Series(diffusion_param_values)
         mean = param_values_as_series.mean()
         std = param_values_as_series.std()
-        quartiles = param_values_as_series.quantile([.25, .5, .75]).to_numpy()
+        quartiles = st.mstats.mquantiles(diffusion_param_values, [.25, .5, .75], alphap=0.5, betap=0.5)
         summary = [param_name, mean, std, quartiles[1], quartiles[2] - quartiles[0], quartiles[0], quartiles[2]]
 
         # Scale if necessary

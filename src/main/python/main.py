@@ -301,17 +301,22 @@ class App(QWidget):
 
         if dialog.exec():
             paths = dialog.selectedFiles()
+            print(paths)
             for patient_data_directory in paths:
+                data = None
+                patient_identifier = os.path.basename(patient_data_directory)
                 try:
-                    patient_identifier = os.path.basename(patient_data_directory)
+                    print(patient_data_directory + file_extension)
                     if patient_identifier not in self.patient_data_sets:
                         data = loadmat(patient_data_directory + file_extension)
-                        self.load_data(patient_identifier, data)
                 except:
                     error_dialog = QtWidgets.QErrorMessage()
                     error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
                                              f'parameters')
                     error_dialog.exec_()
+
+                if data is not None:
+                    self.load_data(patient_identifier, data)
 
 
 if __name__ == '__main__':
