@@ -294,19 +294,17 @@ class App(QWidget):
 
         # to make it possible to select multiple directories:
         if file_view:
-            file_view.setSelectionMode(QAbstractItemView.MultiSelection)
+            file_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
         f_tree_view = dialog.findChild(QTreeView)
         if f_tree_view:
-            f_tree_view.setSelectionMode(QAbstractItemView.MultiSelection)
+            f_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         if dialog.exec():
             paths = dialog.selectedFiles()
-            print(paths)
             for patient_data_directory in paths:
                 data = None
                 patient_identifier = os.path.basename(patient_data_directory)
                 try:
-                    print(patient_data_directory + file_extension)
                     if patient_identifier not in self.patient_data_sets:
                         data = loadmat(patient_data_directory + file_extension)
                 except:
