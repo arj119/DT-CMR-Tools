@@ -12,8 +12,6 @@ from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QAbstractItemView
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from scipy.io import loadmat
 
-file_extension = '/result_images/exported_data/diffusion_parameters.mat'
-
 
 class App(QWidget):
     def __init__(self):
@@ -302,19 +300,19 @@ class App(QWidget):
         if dialog.exec():
             paths = dialog.selectedFiles()
             for patient_data_directory in paths:
-                data = None
                 patient_identifier = os.path.basename(patient_data_directory)
-                try:
-                    if patient_identifier not in self.patient_data_sets:
-                        data = loadmat(patient_data_directory + file_extension)
-                except:
-                    error_dialog = QtWidgets.QErrorMessage()
-                    error_dialog.showMessage(f'File path error: {patient_data_directory} does not contain diffusion '
-                                             f'parameters')
-                    error_dialog.exec_()
-
-                if data is not None:
-                    self.load_data(patient_identifier, data)
+                if patient_identifier not in self.patient_data_sets:
+                    dp_file_path = os.path.join(patient_data_directory, 'result_images', 'exported_data',
+                                                'diffusion_parameters.mat')
+                    if os.path.exists(dp_file_path):
+                        data = loadmat(dp_file_path)
+                        self.load_data(patient_identifier, data)
+                    else:
+                        error_dialog = QtWidgets.QErrorMessage()
+                        error_dialog.showMessage(
+                            f'File path error: {patient_data_directory} does not contain diffusion '
+                            f'parameters')
+                        error_dialog.exec_()
 
 
 if __name__ == '__main__':
