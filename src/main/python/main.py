@@ -79,7 +79,6 @@ class App(QWidget):
         summary_table = QTableView()
         summary_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         summary_table.installEventFilter(self)
-        summary_table.setWindowTitle(patient_identifier)
         vbox1.addWidget(summary_table)
 
         # Regions Summary Table
@@ -131,13 +130,38 @@ class App(QWidget):
                 partial(self.update_selected_region_summary, buttonGroup, region_summary_table, patient_identifier))
             vbox.addWidget(check_box)
             buttonGroup.addButton(check_box, i)
-        hbox.addLayout(vbox)
 
+        # Create inversion button
+        inversion_button = QPushButton('Invert')
+        inversion_button.clicked.connect(
+            partial(self.invert_buttons, buttonGroup, region_summary_table, patient_identifier))
+
+        vbox.addWidget(inversion_button)
+        hbox.addLayout(vbox)
         box.setLayout(hbox)
         widgetBox.addWidget(box)
         widgetBox.addStretch(1)
 
-    #   Creates region selection buttons
+    # Inverts buttons for region selection
+    def invert_buttons(self, regions_buttons, region_summary_table, patient_identifier):
+        for button in regions_buttons.buttons():
+            button.toggle()
+            button.repaint()
+        self.update_selected_region_summary(regions_buttons, region_summary_table, patient_identifier)
+
+    #   Updates selected region summary table
+    def update_selected_region_summary(self, region_buttons, region_summary_table, patient_identifier):
+        regions = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
+        regions_summary = self.patient_data_sets[patient_identifier].get_regions_summary(regions, patient_identifier)
+        self.patient_regions[patient_identifier] = regions
+        model = dfm.DataFrameModel(regions_summary)
+
+        region_summary_table.setModel(model)
+        region_summary_table.resizeColumnsToContents()
+        region_summary_table.repaint()
+        self.update_combined()
+
+    #   Copy event
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.KeyPress and
                 event.matches(QtGui.QKeySequence.Copy)):
@@ -162,24 +186,12 @@ class App(QWidget):
             csv.writer(stream, delimiter='\t').writerows(table)
             QtWidgets.qApp.clipboard().setText(stream.getvalue())
 
-    #   Updates selected region summary table
-    def update_selected_region_summary(self, region_buttons, region_summary_table, patient_identifier):
-        regions = [i for i, button in enumerate(region_buttons.buttons()) if button.isChecked()]
-
-        regions_summary = self.patient_data_sets[patient_identifier].get_regions_summary(regions, patient_identifier)
-        self.patient_regions[patient_identifier] = regions
-        model = dfm.DataFrameModel(regions_summary)
-
-        region_summary_table.setModel(model)
-        region_summary_table.resizeColumnsToContents()
-        self.update_combined()
-
     #   Loads data into table view
     def load_table_view(self, data, table):
         model = dfm.DataFrameModel(data)
         table.setModel(model)
         table.resizeColumnsToContents()
-        table.show()
+        table.repaint()
         return self.vbox2
 
     # Displays combined patient summary section
@@ -213,6 +225,7 @@ class App(QWidget):
         self.update_combined()
         self.update_combined_global()
 
+    # Open selected patient tab
     def open_patient_tab(self):
         selection = self.combined_patients_table.selectedIndexes()
         for i in range(self.tabs.count()):
@@ -226,10 +239,6 @@ class App(QWidget):
 
     # Updates combined patient summary section
     def update_combined(self):
-        combined_patient_regions = {patient_identifier: regions for (patient_identifier, regions) in
-                                    self.patient_regions.items()
-                                    if patient_identifier in self.combined_patients}
-
         # Combined selected regions table update
         summary = self.combined_patients_summary_data.get_combined_patient_regions_summary(self.patient_regions)
         self.load_table_view(summary, self.combined_selected_regions_table)
@@ -279,6 +288,7 @@ class App(QWidget):
         self.display_patient_data(patient_identifier, summary)
         self.combined_patients_summary_data.add_data(data, patient_identifier)
         self.update_combined_global()
+        self.tabs.repaint()
 
     #   Allows user to open directories
     def open_file_dialog(self):
