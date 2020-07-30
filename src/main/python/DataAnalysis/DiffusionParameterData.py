@@ -4,7 +4,7 @@ import scipy.stats as st
 
 column_ending = '_12_seg'
 supported_diffusion_parameters = ['E1', 'E2', 'E3', 'FA', 'MD', 'MODE',
-                                  'HA', 'E2A', 'IA', 'TA']
+                                  'HA', 'E2A', 'IA', 'TA', 'HA_lg', 'WALL_THICKNESS']
 
 
 def __flatten__(list):
