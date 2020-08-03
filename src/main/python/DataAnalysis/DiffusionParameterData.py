@@ -55,7 +55,7 @@ class DiffusionParameterData:
         if param_name == 'HA_lg * WALL_THICKNESS / 100':
             dpv_HA_lg = np.array(self.get_combined_param_values('HA_lg', patient_to_regions))
             dpv_WALL_THICKNESS = np.array(self.get_combined_param_values('WALL_THICKNESS', patient_to_regions))
-            diffusion_param_values = np.multiply(dpv_HA_lg, dpv_WALL_THICKNESS) / 100;
+            diffusion_param_values = np.multiply(dpv_HA_lg, dpv_WALL_THICKNESS) / 100
         else:
             diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
         return diffusion_param_values
