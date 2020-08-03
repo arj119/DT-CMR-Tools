@@ -4,7 +4,7 @@ import scipy.stats as st
 
 column_ending = '_12_seg'
 supported_diffusion_parameters = ['E1', 'E2', 'E3', 'FA', 'MD', 'MODE',
-                                  'HA', 'E2A', 'IA', 'TA', 'HA_lg', 'WALL_THICKNESS']
+                                  'HA', 'E2A', 'IA', 'TA', 'HA_lg', 'WALL_THICKNESS', 'HA_lg * WALL_THICKNESS / 100']
 
 
 def __flatten__(list):
@@ -50,9 +50,20 @@ class DiffusionParameterData:
             values.append(self.get_parameter_regions_values(param_name, regions, patient_identifier))
         return __flatten__(values)
 
+    # Returns a flat numpy array of diffusion parameter values of a given patients and their regions
+    def get_combined_param_values_array(self, param_name, patient_to_regions):
+        if param_name == 'HA_lg * WALL_THICKNESS / 100':
+            dpv_HA_lg = np.array(self.get_combined_param_values('HA_lg', patient_to_regions))
+            dpv_WALL_THICKNESS = np.array(self.get_combined_param_values('WALL_THICKNESS', patient_to_regions))
+            diffusion_param_values = np.multiply(dpv_HA_lg, dpv_WALL_THICKNESS) / 100;
+        else:
+            diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
+        return diffusion_param_values
+
     # Returns a summary entry for given diffusion parameter for each patient and the selected regions
     def get_combined_param_region_summary(self, param_name, patient_to_regions):
-        diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
+        diffusion_param_values = self.get_combined_param_values_array(param_name, patient_to_regions)
+
         if param_name == 'E2A' or param_name == 'TA':
             diffusion_param_values = np.absolute(diffusion_param_values)
 
