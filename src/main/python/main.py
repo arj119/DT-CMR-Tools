@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+import sys
 from functools import partial
 
 import pandas as pd
@@ -328,4 +329,5 @@ class App(QWidget):
 if __name__ == '__main__':
     ctx = ApplicationContext()
     ex = App()
-    ctx.app.exec_()
+    exit_code = ctx.app.exec_()
+    sys.exit(exit_code)
