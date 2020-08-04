@@ -17,7 +17,7 @@ from scipy.io import loadmat
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.title = 'Diffusion Parameter Results Viewer'
+        self.title = 'DT-CMR RAT'
         self.left = 10
         self.top = 10
         self.width = 1920
