@@ -4,7 +4,8 @@ import scipy.stats as st
 
 column_ending = '_12_seg'
 supported_diffusion_parameters = ['E1', 'E2', 'E3', 'FA', 'MD', 'MODE',
-                                  'HA', 'E2A', 'IA', 'TA', 'HA_lg', 'WALL_THICKNESS', 'HA_lg * WALL_THICKNESS / 100']
+                                  'HA', 'E2A', 'IA', 'TA', 'HA_lg', 'WALL_THICKNESS', 'HA_lg * WALL_THICKNESS / 100',
+                                  'HA_range']
 
 
 def __flatten__(list):
@@ -23,7 +24,7 @@ class DiffusionParameterData:
             raw = {key.replace(column_ending, ""): value for (key, value) in data.items() if
                    key.endswith(column_ending)}
             diffusion_parameters = {key: self.get_diffusion_parameter(key, raw) for key in raw.keys() if
-                                    key in supported_diffusion_parameters}
+                                    key in supported_diffusion_parameters + ['HA_lp']}
 
             self.patient_entries[patient_identifier] = diffusion_parameters
             self.patient_global[patient_identifier] = range(0, 12)
@@ -39,8 +40,12 @@ class DiffusionParameterData:
     def get_parameter_regions_values(self, param_name, regions, patient_identifier):
         diffusion_param = self.patient_entries[patient_identifier][param_name]
         values = []
-        for i in regions:
-            values.append(diffusion_param.at[i, 'values'][0].tolist())
+        if param_name == "HA_lp":
+            for i in regions:
+                values.append(diffusion_param.at[i, 'values'])
+        else:
+            for i in regions:
+                values.append(diffusion_param.at[i, 'values'][0].tolist())
         return __flatten__(values)
 
     # Returns a combined list of values for a diffusion parameter given patients and their regions
@@ -56,6 +61,10 @@ class DiffusionParameterData:
             dpv_HA_lg = np.array(self.get_combined_param_values('HA_lg', patient_to_regions))
             dpv_WALL_THICKNESS = np.array(self.get_combined_param_values('WALL_THICKNESS', patient_to_regions))
             diffusion_param_values = np.multiply(dpv_HA_lg, dpv_WALL_THICKNESS) / 100
+
+        elif param_name == "HA_range":
+            dpv_HA_lp = self.get_combined_param_values('HA_lp', patient_to_regions)
+            diffusion_param_values = np.array(np.mean(dpv_HA_lp, axis=0)) if len(dpv_HA_lp) else []
         else:
             diffusion_param_values = np.array(self.get_combined_param_values(param_name, patient_to_regions))
         return diffusion_param_values
@@ -79,7 +88,13 @@ class DiffusionParameterData:
         if param_name in scale_params:
             for i in range(1, len(summary)):
                 summary[i] = summary[i] * 1000
-        return summary
+
+        # if the parameter is HA_range, return also the min and max
+        if param_name == 'HA_range':
+            min_HA_range = param_values_as_series.min()
+            max_HA_range = param_values_as_series.max()
+            return summary, [min_HA_range, max_HA_range]
+        return summary, None
 
     # Returns a summary panda data frame for all diffusion parameters in the given dictionary of
     # patient identifiers to regions
@@ -88,7 +103,14 @@ class DiffusionParameterData:
                    'Lower Quartile', 'Upper Quartile']
         data = []
         for parameter in supported_diffusion_parameters:
-            parameter_summary = self.get_combined_param_region_summary(parameter, patient_to_regions)
+            parameter_summary, HA_min_max = self.get_combined_param_region_summary(parameter, patient_to_regions)
+
+            if parameter_summary[0] == 'HA_range' and not np.isnan(HA_min_max).any():
+                parameter_summary[1] = f'min: {HA_min_max[0]:.2f}'
+                parameter_summary[2] = f'max: {HA_min_max[1]:.2f}'
+                parameter_summary[3] = f'range: {(HA_min_max[1] - HA_min_max[0]):.2f}'
+                parameter_summary[4:] = ""
+
             data.append(parameter_summary)
         return pd.DataFrame(data, columns=columns)
 
