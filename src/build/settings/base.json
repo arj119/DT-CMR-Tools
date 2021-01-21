@@ -2,5 +2,9 @@
   "app_name": "DT-CMR RAT",
   "author": "Arjun Banerjee",
   "main_module": "src/main/python/main.py",
-  "version": "1.0.1"
+  "version": "1.2.0",
+  "hidden_imports": [
+    "scipy.spatial.transform._rotation_groups",
+    "scipy.special.cython_special"
+  ]
 }
