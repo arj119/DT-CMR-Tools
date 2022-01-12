@@ -45,7 +45,8 @@ class DiffusionParameterData:
                 values.append(diffusion_param.at[i, 'values'])
         else:
             for i in regions:
-                values.append(diffusion_param.at[i, 'values'][0].tolist())
+                if diffusion_param.at[i, 'values'] != []:
+                    values.append(diffusion_param.at[i, 'values'][0].tolist())
         return __flatten__(values)
 
     # Returns a combined list of values for a diffusion parameter given patients and their regions
@@ -104,7 +105,6 @@ class DiffusionParameterData:
         data = []
         for parameter in supported_diffusion_parameters:
             parameter_summary, HA_min_max = self.get_combined_param_region_summary(parameter, patient_to_regions)
-
             if parameter_summary[0] == 'HA_range' and not np.isnan(HA_min_max).any():
                 parameter_summary[1] = f'min: {HA_min_max[0]:.2f}'
                 parameter_summary[2] = f'max: {HA_min_max[1]:.2f}'
