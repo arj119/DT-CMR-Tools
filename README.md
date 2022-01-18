@@ -22,3 +22,4 @@ pip install -r requirements.txt
 
 ## macOS
 1. Edit command ```DT-CMR_RAT_app.command``` to the correct path and copy it to the Applications folder.
+2. Replace the file icon with the icon provided.
