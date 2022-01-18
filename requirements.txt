@@ -1,5 +1,4 @@
 altgraph==0.17.2
-fbs==1.0.3
 future==0.18.2
 macholib==1.15.2
 numpy==1.22.1
