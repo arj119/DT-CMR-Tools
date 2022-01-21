@@ -9,8 +9,7 @@ from DataAnalysis import DataFrameModel as dfm, DiffusionParameterData as dpd
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QPushButton, QAbstractItemView, QButtonGroup, QCheckBox, \
-    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel, QTabWidget, QTreeView, QListView, QGridLayout
-from fbs_runtime.application_context.PyQt5 import ApplicationContext
+    QVBoxLayout, QHBoxLayout, QGroupBox, QTableView, QLabel, QTabWidget, QTreeView, QListView, QGridLayout,QApplication
 from scipy.io import loadmat
 
 
@@ -327,7 +326,7 @@ class App(QWidget):
 
 
 if __name__ == '__main__':
-    ctx = ApplicationContext()
+    ctx_app = QApplication([])
     ex = App()
-    exit_code = ctx.app.exec_()
+    exit_code = ctx_app.exec_()
     sys.exit(exit_code)

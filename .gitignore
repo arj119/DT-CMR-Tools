@@ -87,3 +87,6 @@ venv.bak/
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
+.DS_Store
+.idea/other.xml
+.idea/DT-CMR-Tools_adrian.iml
